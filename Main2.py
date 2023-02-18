@@ -1,6 +1,7 @@
 import pygame
 import random
 import sys
+import os
 import copy
 
 from pygame.locals import *
@@ -80,13 +81,13 @@ class Drawable:
         rect = pygame.Rect((x * CHARWIDTH, y * CHARHEIGHT, CHARWIDTH, CHARHEIGHT))
         DISPLAYSURF.blit(self.image, rect)
 
-
-lava = Drawable('lava.png')
-lava_rock = Drawable('lava_rock.png')
-grass = Drawable('grass.png')
-rock = Drawable('rock.png')
-tree = Drawable('tree.png')
-heart = Drawable('heart.png')
+sprite_folder = "./sprites"
+lava = Drawable(os.path.join(sprite_folder, 'lava.png'))
+lava_rock = Drawable(os.path.join(sprite_folder, 'lava_rock.png'))
+grass = Drawable(os.path.join(sprite_folder, 'grass.png'))
+rock = Drawable(os.path.join(sprite_folder, 'rock.png'))
+tree = Drawable(os.path.join(sprite_folder, 'tree.png'))
+heart = Drawable(os.path.join(sprite_folder, 'heart.png'))
 
 
 class Background(Grid):
@@ -290,7 +291,7 @@ class Projectile(Unit):
 
 class PlayerCharacter(Drawable):
     def __init__(self):
-        super().__init__('base_char.png')
+        super().__init__(os.path.join(sprite_folder, 'base_char.png'))
         self.max_health = 3
         self.health = 3
         self.projectile = 'heart_weapon'
@@ -361,7 +362,7 @@ class Monster(Unit):
 
 class Ninja(Monster):
     def __init__(self):
-        super().__init__('ninja.png', 1, 2)
+        super().__init__(os.path.join(sprite_folder, 'ninja.png'), 1, 2)
 
 
 class ThrowNinja(Ninja, Thrower):
@@ -389,14 +390,14 @@ class ThrowNinja(Ninja, Thrower):
 
 class Boss(Monster):
     def __init__(self):
-        super().__init__('boss.png', 1, 5)
+        super().__init__(os.path.join(sprite_folder, 'boss.png'), 1, 5)
 
 
 def create_feature(object_type):
     object_list = {
         'ninja': Ninja(),
         'throw_ninja': ThrowNinja(),
-        'heart_weapon': Projectile('heart.png')
+        'heart_weapon': Projectile(os.path.join(sprite_folder, 'heart.png'))
     }
     return object_list.get(object_type)
 
@@ -518,7 +519,7 @@ def main():
 
     pygame.init()
     FPSCLOCK = pygame.time.Clock()
-    pygame.display.set_icon(pygame.image.load('gameicon.png'))
+    pygame.display.set_icon(pygame.image.load(os.path.join(sprite_folder, 'gameicon.png')))
     DISPLAYSURF = pygame.display.set_mode((WINWIDTH, WINHEIGHT))
     pygame.display.set_caption('Cloud Empire')
     BASICFONT = pygame.font.Font('freesansbold.ttf', 32)
