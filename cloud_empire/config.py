@@ -27,4 +27,4 @@ RIGHT = 'right'
 UP = 'up'
 DOWN = 'down'
 
-SPRITE_FOLDER = "../sprites"
+SPRITE_FOLDER = "..\sprites"

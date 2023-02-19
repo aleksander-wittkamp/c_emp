@@ -1,16 +1,15 @@
 import random
 import sys
 import os
-import copy
 
 import pygame
 from pygame.locals import QUIT, K_UP, K_DOWN, K_LEFT, K_RIGHT, K_ESCAPE, KEYDOWN
 from pygame.locals import K_w, K_a, K_s, K_d, K_r
 
-from cloud_empire.config import *
-from cloud_empire.world_map import WorldMap
-from cloud_empire.grid import Grid
-from cloud_empire.drawable import Drawable
+from config import *
+from world_map import WorldMap
+from grid import Grid
+from rooms import *
 
 png_names = [
     'lava', 'lava_rock', 'grass', 'rock', 'tree', 'heart', 
@@ -18,14 +17,20 @@ png_names = [
 
 pngs = {name: os.path.join(SPRITE_FOLDER, name + '.png') for name in png_names}
 
+class Drawable:
+    def __init__(self, img):
+        self.image = pygame.transform.scale(pygame.image.load(img), (CHARWIDTH, CHARHEIGHT))
+
+    def draw(self, x, y):
+        rect = pygame.Rect((x * CHARWIDTH, y * CHARHEIGHT, CHARWIDTH, CHARHEIGHT))
+        DISPLAYSURF.blit(self.image, rect)
+
 lava = Drawable(pngs['lava'])
 lava_rock = Drawable(pngs['lava_rock'])
 grass = Drawable(pngs['grass'])
 rock = Drawable(pngs['rock'])
 tree = Drawable(pngs['tree'])
 heart = Drawable(pngs['heart'])
-
-ninja = os.path.join(SPRITE_FOLDER, 'ninja.png')
 
 class Background(Grid):
     grid_key = {0: grass, 1: lava}
@@ -178,6 +183,8 @@ class Room:
         for i in range(self.player.health):
             heart.draw(i, 12)
 
+all_grass = Background(all_grass_grid)
+all_lava = Background(all_lava_grid)
 
 class Unit(Drawable):
     def __init__(self, img):
@@ -185,6 +192,20 @@ class Unit(Drawable):
 
     def update(self, grid, surrounding_info, x, y, player, dmg):
         raise NotImplementedError
+
+class HasHealth():
+    def __init__(self, starting_health, max_health=None):
+        self.health = starting_health
+        self.max_health = max_health if max_health else starting_health
+    
+    def increase_health(self, amount):
+        self.health += amount
+
+    def decrease_health(self, amount):
+        self.health -= amount
+
+    def health_leq_zero(self):
+        return self.health <= 0
 
 
 class Projectile(Unit):
@@ -225,11 +246,10 @@ class Projectile(Unit):
         return grid
 
 
-class PlayerCharacter(Drawable):
-    def __init__(self):
-        super().__init__(pngs['base_char'])
-        self.max_health = 3
-        self.health = 3
+class PlayerCharacter(Drawable, HasHealth):
+    def __init__(self, starting_health):
+        super(Drawable, self).__init__(pngs['base_char'])
+        super(HasHealth, self).__init__(starting_health)
         self.projectile = 'heart_weapon'
 
     def take_damage(self, amount):
@@ -260,13 +280,13 @@ class Thrower:
         return grid
 
 
-class Monster(Unit):
-    def __init__(self, img, atk, health):
-        super().__init__(img)
+class Monster(Unit, HasHealth):
+    def __init__(self, img, atk, starting_health):
+        super(Unit, self).__init__(img)
+        super(HasHealth, self).__init__(starting_health)
         self.reset_val = 30
         self.counter = self.reset_val + random.randint(-5, 5)
         self.attack = atk
-        self.health = health
 
     def update(self, grid, info, x, y, player, dmg):
         open_spaces = [i for i, j in info.items() if j]
@@ -340,7 +360,7 @@ def create_feature(object_type):
 
 class DamageBar:
     def __init__(self, x, y, direction):
-        self.timer = 8
+        self.timer = 6
         if direction == UP:
             self.bar = pygame.Rect(x * CHARWIDTH + 8, y * CHARHEIGHT - 2, 24, 6)
         elif direction == RIGHT:
@@ -380,74 +400,6 @@ class DamageManager:
 def terminate():
     pygame.quit()
     sys.exit()
-
-
-# Background grids
-# 0: grass, 1: lava
-all_grass_grid = [[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]
-
-all_grass = Background(all_grass_grid)
-
-all_lava_grid = [[1] * 16] * 12
-all_lava = Background(all_lava_grid)
-
-# all_grass = [[0] * 16] * 12
-
-# Foregrounds
-# 0: None, 1: rock, 2: tree
-rm1_grid = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 0, 1],
-            [1, 0, 0, 0, 2, 0, 0, 2, 0, 0, 0, 0, 2, 1, 0, 1],
-            [1, 0, 0, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-
-rm1_ft = [['ninja', 11, 5], ['throw_ninja', 1, 9]]
-
-rm2_grid = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1],
-            [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1],
-            [1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]]
-
-rm2_ft = [['ninja', 2, 3], ['ninja', 6, 10], ['ninja', 13, 5]]
-
-rm3_grid = [[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3],
-            [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [3, 3, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3],
-            [3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3],
-            [3, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3],
-            [3, 3, 0, 0, 3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [3, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3],
-            [3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3]]
 
 
 def main():
